@@ -1,19 +1,9 @@
-"""
-ClearRoute – AI Emergency Response System (Production/Hackathon Edition)
-app.py — Flask Backend API
-
-HOW TO RUN:
-    pip install flask flask-cors requests anthropic
-    python app.py
-
-Optional: Set Anthropic API key for real AI logic.
-    export ANTHROPIC_API_KEY=sk-ant-...         
-"""
 import sqlite3
 import os, time, math
-from flask import Flask, request, jsonify, render_template, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import google.generativeai as genai 
+from twilio.rest import Client
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -31,11 +21,10 @@ def haversine(lat1, lon1, lat2, lon2):
     return R * c
 
 def init_db():
-    conn = None
-    try:
-        conn = sqlite3.connect("users.db", timeout=10)
-        c = conn.cursor()
-        c.execute("""
+    conn = sqlite3.connect("users.db")
+    c = conn.cursor()
+
+    c.execute("""
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE,
@@ -50,12 +39,9 @@ CREATE TABLE IF NOT EXISTS users (
     weight REAL
 )
 """)
-        conn.commit()
-    except Exception as e:
-        print("Database init error:", e)
-    finally:
-        if conn:
-            conn.close()
+
+    conn.commit()
+    conn.close()
 
 init_db()
 
@@ -71,7 +57,15 @@ init_db()
 #         AI_ENABLED = True
 # except ImportError:
 #     pass
-# (imports handled at top of file)
+import google.generativeai as genai
+from dotenv import load_dotenv
+
+load_dotenv()
+
+twilio_client = Client(
+    os.getenv("TWILIO_SID"),
+    os.getenv("TWILIO_AUTH")
+)
 
 GEMINI_ENABLED = False
 
@@ -79,7 +73,7 @@ try:
     api_key = os.environ.get("GEMINI_API_KEY")
     if api_key:
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("gemini-1.5-flash-latest")
+        model = genai.GenerativeModel("gemini-3-flash-preview")
         GEMINI_ENABLED = True
 except Exception as e:
     print("Gemini init error:", e)
@@ -106,77 +100,106 @@ DB_HOSPITALS = [
 def static_files(path): 
     return send_from_directory("static", path)
 
+def send_hospital_alert(message):
+    try:
+        twilio_client.messages.create(
+            body=message,
+            from_=os.getenv("TWILIO_PHONE"),
+            to=os.getenv("HOSPITAL_PHONE")
+        )
+        print("Hospital SMS sent")
+    except Exception as e:
+        print("SMS Error:", e)
+
+def make_hospital_call():
+    try:
+        call = twilio_client.calls.create(
+            twiml='''
+<Response>
+    <Say voice="alice">
+        Emergency alert. Critical patient incoming. 
+        Please prepare emergency response team immediately.
+    </Say>
+</Response>
+''',
+            from_=os.getenv("TWILIO_PHONE"),
+            to=os.getenv("HOSPITAL_PHONE")
+        )
+
+        print("Call initiated:", call.sid)
+    except Exception as e:
+        print("Call Error:", e)
+
+def send_traffic_alert(message):
+
+    try:
+        twilio_client.messages.create(
+            body=message,
+            from_=os.getenv("TWILIO_PHONE"),
+            to=os.getenv("TRAFFIC_PHONE")
+        )
+
+        print("Traffic alert sent")
+
+    except Exception as e:
+        print("Traffic SMS Error:", e)
+
 @app.route("/")
 def home():
-    return render_template("login.html")
+    return send_from_directory("templates", "login.html")
 
-@app.route("/signup", methods=["GET"])
+@app.route("/signup-page")
 def signup_page():
-    return render_template("signup.html")
+    return send_from_directory("templates", "signup.html")
 
 @app.route("/dashboard")
 def dashboard():
-    return render_template("index.html")
+    return send_from_directory("templates", "index.html")
 
-@app.route("/signup/submit", methods=["POST"])
+@app.route("/signup", methods=["POST"])
 def signup():
-    conn = None
-    try:
-        data = request.json
-        print("Received signup data:", data)
+    data = request.json
 
-        conn = sqlite3.connect("users.db", timeout=10)
-        c = conn.cursor()
+    conn = sqlite3.connect("users.db")
+    c = conn.cursor()
 
-        c.execute("""
+    c.execute("""
 INSERT INTO users 
 (username, password, email, mobile, name, age, gender, location, diseases, weight)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 """, (
-            data.get("username"),
-            data.get("password"),
-            data.get("email"),
-            data.get("mobile"),
-            data.get("name"),
-            data.get("age"),
-            data.get("gender"),
-            data.get("location"),
-            data.get("diseases"),
-            data.get("weight")
-        ))
+    data["username"],
+    data["password"],
+    data["email"],
+    data["mobile"],
+    data["name"],
+    data["age"],
+    data["gender"],
+    data["location"],
+    data["diseases"],
+    data["weight"]
+))
 
-        conn.commit()
-        print("Signup successful for:", data.get("username"))
-        return jsonify({"status":"success"})
-    except Exception as e:
-        print("Signup error:", e)
-        return jsonify({"status":"fail", "message": str(e)})
-    finally:
-        if conn:
-            conn.close()
+    conn.commit()
+    conn.close()
 
+    return jsonify({"status":"success"})
 @app.route("/login", methods=["POST"])
 def login():
-    conn = None
-    try:
-        data = request.json
-        conn = sqlite3.connect("users.db", timeout=10)
-        c = conn.cursor()
+    data = request.json
+    conn = sqlite3.connect("users.db")
+    c = conn.cursor()
 
-        c.execute("SELECT * FROM users WHERE username=? AND password=?",
-                  (data["username"], data["password"]))
+    c.execute("SELECT * FROM users WHERE username=? AND password=?",
+              (data["username"], data["password"]))
 
-        user = c.fetchone()
-        if user:
-            return jsonify({"status":"success"})
-        else:
-            return jsonify({"status":"fail"})
-    except Exception as e:
-        print("Login error:", e)
-        return jsonify({"status":"fail", "message": str(e)})
-    finally:
-        if conn:
-            conn.close()
+    user = c.fetchone()
+    conn.close()
+
+    if user:
+        return jsonify({"status":"success"})
+    else:
+        return jsonify({"status":"fail"})
 # ---------------------------------------------------------
 # Core API Endpoint
 # ---------------------------------------------------------
@@ -241,41 +264,86 @@ def process_emergency():
                 hospital_switched = True
                 switch_reason = f"⚠️ AI OVERRIDE: ICU FULL at {orig_name}. Diverted to nearest available: {best_hospital['name']}."
 
-    # AGENT 3: Medical Summary Generation
-    medical_summary = "Analyzing patient data..."
+    # AGENT 3: Medical Summary Generation (Uses Claude if available)
+    medical_summary = f"Patient inbound presenting with {condition}. Vital signs pending. Team prepare for immediate triage."
     traffic_alert = "Normal traffic rules apply."
     hospital_alert = "Patient inbound. General admission prep."
     
     if severity_level == "CRITICAL":
-        medical_summary = "Administer 324mg chewed aspirin and obtain an immediate 12-lead ECG. Activate Cath Lab for emergent reperfusion."
         traffic_alert = "High Priority: Overriding all traffic signals along route to ensure uninterrupted path."
-        hospital_alert = f"Urgent: Reserve ICU bed at {best_hospital['name']}. Trauma team standby."
-    else:
-        medical_summary = "Stabilize patient and monitor vitals. Transport to nearest general ward for evaluation."
-        traffic_alert = "Route optimized based on current congestion. No signal overrides required."
-        hospital_alert = f"Notify ER of incoming stable patient at {best_hospital['name']}."
+        hospital_alert = f"Urgent: Reserve ICU bed for with {condition} at {best_hospital['name']} . Trauma team standby."
+        send_hospital_alert(hospital_alert)
+        make_hospital_call()
+        send_traffic_alert(traffic_alert)
+    
+    # if GEMINI_ENABLED:
+    #     try:
+    #         prompt = f"You are an Emergency Medical AI. Patient report: '{condition}'. Severity: {severity_level}. Provide a concise 2-sentence clinical directive for the receiving ER team, stating what equipment or specialists to prepare."
+    #         resp = AI_CLIENT.messages.create(
+    #             model="claude-3-haiku-20240307", 
+    #             max_tokens=100,
+    #             messages=[{"role": "user", "content": prompt}]
+    #         )
+    #         medical_summary = resp.content[0].text.strip()
+    #     except Exception as e:
+    #         print(f"Anthropic API Error: {e}")
 
-    return jsonify({
-        "status": "success",
-        "severity": severity_level,
-        "hospital": best_hospital,
-        "route": {
-            "optimized": 8,
-            "distance": 2.4,
-            "desc": traffic_alert
+    if GEMINI_ENABLED:
+        try:
+            prompt = f"""
+You are an Emergency Medical AI.
+Patient condition: {condition}
+Severity: {severity_level}
+
+Give a short 2-line medical instruction for ER team.
+"""
+
+            response = model.generate_content(prompt)
+            medical_summary = response.text
+
+        except Exception as e:
+            print("Gemini Error:", e)
+
+    # Calculate routing metadata
+    eta = 12 if severity_level == "CRITICAL" else 18
+    saved = 15 if severity_level == "CRITICAL" else 5
+    route_desc = "Traffic Control Notified → Police clearing route" if severity_level == "CRITICAL" else "Standard Routing Active."
+
+    response_payload = {
+        "severity": {"level": severity_level},
+        "hospital": {
+            "name": best_hospital["name"],
+            "address": best_hospital["address"],
+            "lat": best_hospital["lat"],
+            "lon": best_hospital["lon"],
+            "icu": best_hospital["icu"],
+            "gen": best_hospital["general"],
+            "switched": hospital_switched,
+            "switch_reason": switch_reason
         },
-        "ai_reports": {
-            "medical": medical_summary,
-            "traffic": traffic_alert,
-            "hospital": hospital_alert
+        "route": {
+            "optimized": eta,
+            "time_saved": saved,
+            "desc": route_desc
+        },
+        "nearby_hospitals": valid_hospitals[:4],
+        "messages": {
+            "medical_summary": medical_summary,
+            "traffic_alert": traffic_alert,
+            "hospital_alert": hospital_alert
         }
-    })
+    }
+    
+    # Simulate processing delay to allow UI to show terminal streaming
+    time.sleep(0.8) 
+    
+    return jsonify(response_payload)
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
     print("\n" + "="*50)
-    print("[*] ClearRoute AI Network Backend Started")
-    print(f"[*] AI Engine: {'ONLINE (Gemini Active)' if GEMINI_ENABLED else 'OFFLINE (Using Local Rule-based Fallback)'}")
-    print(f"[*] Dashboard: http://0.0.0.0:{port}")
+    print("🚀 ClearRoute AI Network Backend Started")
+    print(f"🧠 AI Engine: {'ONLINE (Claude Active)' if GEMINI_ENABLED else 'OFFLINE (Using Local Rule-based Fallback)'}")
+    print("🌐 Dashboard: http://127.0.0.1:5000")
     print("="*50 + "\n")
-    app.run(debug=False, host="0.0.0.0", port=port)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(debug=False, host="0.0.0.0", port=port)
