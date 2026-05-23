@@ -11,16 +11,12 @@
 [![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-F7DF1E?style=flat-square&logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 [![Leaflet](https://img.shields.io/badge/Leaflet.js-1.9-199900?style=flat-square&logo=leaflet&logoColor=white)](https://leafletjs.com)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
-[![HackArena](https://img.shields.io/badge/HackArena%202025-Kolkata%20Zonal-E8001C?style=flat-square)](/)
 
 <br/>
 
 > *"Every minute of delay in emergency response costs lives. ClearRoute eliminates that delay — using AI that acts, not just advises."*
 
 <br/>
-
-<img width="1024" height="1536" alt="WhatsApp Image 2026-05-01 at 9 13 08 PM" src="https://github.com/user-attachments/assets/a7501258-c652-49b8-acfd-341ab2112901" />
-
 
 </div>
 
@@ -54,33 +50,40 @@ ClearRoute is built around **4 autonomous AI agents** and **2 generative AI modu
 │  (Location + Condition + Prescription)                          │
 │           │                                                     │
 │           ▼                                                     │
-│  ┌─────────────────┐                                           │
-│  │  Agent 1        │  Severity Detection Agent                 │
-│  │  🔍 Classify    │  Keyword NLP → CRITICAL / MODERATE / LOW  │
-│  └────────┬────────┘                                           │
-│           ▼                                                     │
-│  ┌─────────────────┐                                           │
-│  │  Agent 2        │  Hospital Selection Agent                 │
-│  │  🏥 Match       │  Condition type + ICU availability check  │
-│  └────────┬────────┘  Auto-switch if ICU beds = 0             │
-│           ▼                                                     │
-│  ┌─────────────────┐                                           │
-│  │  Agent 3        │  Traffic Clearance Agent                  │
-│  │  🚦 Route       │  OSRM smart routing + priority corridor   │
-│  └────────┬────────┘                                           │
-│           ▼                                                     │
-│  ┌─────────────────┐                                           │
-│  │  Agent 4        │  ER Readiness Agent                       │
-│  │  📡 Alert       │  Pre-alert dispatch + bed coordination    │
-│  └────────┬────────┘                                           │
-│           ▼                                                     │
-│  ┌──────────────────────────────────────┐                      │
-│  │  Generative AI Modules               │                      │
-│  │  ✨ Prescription Summary Generator   │  Claude AI / Fallback│
-│  │  📣 Alert Message Generator          │  Dynamic text gen    │
-│  └──────────────────────────────────────┘                      │
-└─────────────────────────────────────────────────────────────────┘
+│  ┌─────────────────┐                                            │
+│  │  Agent 1        │  Severity Detection Agent                  │
+│  │  🔍 Classify    │  Keyword NLP → CRITICAL / MODERATE / LOW   │
+│  └────────┬────────┘                                            │
+│            ▼                                                    │
+│  ┌─────────────────┐                                            │
+│  │  Agent 2        │  Hospital Selection Agent                  │
+│  │  🏥 Match       │  Condition type + ICU availability check   │
+│  └────────┬────────┘  Auto-switch if ICU beds = 0               │
+│            ▼                                                    │
+│  ┌─────────────────┐                                            │
+│  │  Agent 3        │  Traffic Clearance Agent                   │
+│  │  🚦 Route       │  OSRM smart routing + priority corridor    │
+│  └────────┬────────┘                                             │
+│            ▼                                                     │
+│  ┌─────────────────┐                                             │
+│  │  Agent 4        │  ER Readiness Agent                         │
+│  │  📡 Alert       │  Pre-alert dispatch + bed coordination      │
+│  └────────┬────────┘                                              │
+│            ▼                                                      │
+│  ┌──────────────────────────────────────┐                         │
+│  │  Generative AI Modules               │                         │
+│  │  ✨ Prescription Summary Generator   │  Claude AI / Fallback   │
+│  │  📣 Alert Message Generator          │  Dynamic text gen       │
+│  └──────────────────────────────────────┘                          │
+└────────────────────────────────────────────────────────────────────┘
 ```
+
+
+<br>
+
+<img width="1024" height="1536" alt="ChatGPT Image May 1, 2026, 09_12_29 PM" src="https://github.com/user-attachments/assets/3f1915d4-d094-49bf-9a81-0b37e87ab8d5" />
+
+</br>
 
 ### Agent Details
 
@@ -109,11 +112,11 @@ User Reports Emergency
         │
         ▼
    🔍 Agent 1: Severity Detection
-   CRITICAL ──────────────────────────┐
-   MODERATE ─────────────────────┐   │
-   LOW ──────────────────────┐   │   │
-                             │   │   │
-        ▼                    ▼   ▼   ▼
+   CRITICAL ────────────┐
+   MODERATE ────────────┐
+   LOW─────────────────┐
+        │
+        ▼                    
    🏥 Agent 2: Hospital Selection
    (cardiac / trauma / general — auto-switch if ICU = 0)
         │
@@ -130,8 +133,8 @@ User Reports Emergency
    🗺️ Leaflet Map                     📡 Agent 4: ER Readiness
    (Route drawn, ambulance tracked)    (Pre-alert + AI summary sent)
         │                                      │
-        └──────────────┬───────────────────────┘
-                       ▼
+        └────────────┬───────────────────┘
+                     ▼
               ✅ Patient Delivered
               Hospital Ready. Zero Surprises.
 ```
@@ -180,7 +183,15 @@ User Reports Emergency
 
 ---
 
-## ⚙️ Setup
+## 🌐 Live Link
+<p>
+<b>Live Demo:</b>
+<a href="https://clearroute-ai.onrender.com">here</a>
+</p>
+
+---
+
+## ⚙️ Run Locally
 
 ### Prerequisites
 - Python 3.10+
@@ -190,7 +201,7 @@ User Reports Emergency
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/your-username/clearroute.git
+git clone [https://github.com/your-username/clearroute.git](https://github.com/RajanyaSaha-27/ClearRoute.git)
 cd clearroute
 ```
 
@@ -305,12 +316,14 @@ ClearRoute is not just a hackathon project. It is the foundation architecture fo
 
 ```
 clearroute/
-├── index.html          # Main dashboard UI
-├── style.css           # Tactical dark theme
-├── script.js           # Frontend logic + OSRM + map
-├── app.py              # Flask backend + AI agent pipeline
-├── assets/
-│   └── architecture.png
+├──templates
+│  ├── index.html          # Main dashboard UI
+│  ├── login.html          # Login page UI
+│  ├── signup.html         # Signup page UI
+├──static
+│  ├── style.css           # Tactical dark theme
+│  ├── script.js           # Frontend logic + OSRM + map
+├── app.py                 # Flask backend + AI agent pipeline
 └── README.md
 ```
 
@@ -318,8 +331,8 @@ clearroute/
 
 ## 👤 Author
 
-**Biraj Acherjee**
-Built for HackArena 2025 — Kolkata Zonal Round
+**Rajanya Saha**<br>
+**Biraj Acherjee**<br>
 
 ---
 
